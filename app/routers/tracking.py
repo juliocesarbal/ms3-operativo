@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -29,6 +29,7 @@ def historial(
 def cambiar_estado(
     tracking: str,
     cambio: CambiarEstado,
+    bg: BackgroundTasks,
     db: Session = Depends(get_db),
     _user: dict = Depends(require_roles("ADMIN")),
 ):
@@ -36,6 +37,7 @@ def cambiar_estado(
     if not enc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Encomienda no encontrada")
     try:
-        return tracking_service.cambiar_estado(db, enc, cambio)
+        # CU-14: cada cambio de estado queda registrado en blockchain (background).
+        return tracking_service.cambiar_estado(db, enc, cambio, bg=bg)
     except TransicionInvalida as e:
         raise HTTPException(status.HTTP_409_CONFLICT, str(e))

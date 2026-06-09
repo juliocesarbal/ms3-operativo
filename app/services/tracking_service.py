@@ -1,11 +1,12 @@
 import secrets
 
+from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.core.estados import Estado, puede_transicionar
 from app.models.encomienda import Encomienda, EstadoHistorial
 from app.schemas.encomienda import CambiarEstado, EncomiendaCreate
-from app.services import geo, n8n_client
+from app.services import blockchain_service, geo, n8n_client
 
 
 class TransicionInvalida(ValueError):
@@ -55,6 +56,8 @@ def listar(
 
 # Aplica una transicion de estado validando el flujo y registrando historial.
 # commit=False permite agrupar varias en una sola transaccion (p.ej. asignar ruta).
+# bg!=None registra el cambio en blockchain (CAMBIO_ESTADO) en background: persiste
+# el evento al instante (tx_hash pendiente) y lo mina despues sin bloquear la respuesta.
 def transicionar(
     db: Session,
     enc: Encomienda,
@@ -63,9 +66,11 @@ def transicionar(
     gps_lat: float | None = None,
     gps_lng: float | None = None,
     commit: bool = True,
+    bg: BackgroundTasks | None = None,
 ) -> Encomienda:
     if not puede_transicionar(enc.estado, nuevo_estado):
         raise TransicionInvalida(f"Transicion invalida: {enc.estado} -> {nuevo_estado}")
+    anterior = enc.estado
     enc.estado = nuevo_estado
     db.add(
         EstadoHistorial(
@@ -79,6 +84,25 @@ def transicionar(
     if commit:
         db.commit()
         db.refresh(enc)
+
+    # CU-14: registra CADA cambio de estado en blockchain (trazabilidad inmutable).
+    # Requiere commit=True (necesita enc.id persistido). La entrega ya emite su
+    # propio ENTREGA_CONFIRMADA; aqui se cubre el resto del flujo.
+    if bg is not None and commit:
+        evento_id = blockchain_service.crear_pendiente(
+            db,
+            enc.tracking_code,
+            "CAMBIO_ESTADO",
+            {
+                "tracking": enc.tracking_code,
+                "estado_anterior": anterior,
+                "estado_nuevo": nuevo_estado,
+                "ubicacion": ubicacion,
+                "gps_lat": gps_lat,
+                "gps_lng": gps_lng,
+            },
+        )
+        bg.add_task(blockchain_service.registrar_en_cadena, evento_id)
 
     # CU-15: al detectar retraso, dispara el flujo de aviso en n8n (best-effort).
     if nuevo_estado == Estado.RETRASADO.value:
@@ -94,8 +118,10 @@ def transicionar(
     return enc
 
 
-# CU-07: cambia el estado (endpoint manual).
-def cambiar_estado(db: Session, enc: Encomienda, cambio: CambiarEstado) -> Encomienda:
+# CU-07: cambia el estado (endpoint manual). bg propaga el registro en blockchain.
+def cambiar_estado(
+    db: Session, enc: Encomienda, cambio: CambiarEstado, bg: BackgroundTasks | None = None
+) -> Encomienda:
     return transicionar(
-        db, enc, cambio.estado.value, cambio.ubicacion, cambio.gps_lat, cambio.gps_lng
+        db, enc, cambio.estado.value, cambio.ubicacion, cambio.gps_lat, cambio.gps_lng, bg=bg
     )
