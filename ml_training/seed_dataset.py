@@ -416,6 +416,11 @@ def _migrar():
 
 
 def _reset(db):
+    # Las encomiendas operativas (seed_encomiendas) referencian sucursal por FK;
+    # se anulan esas refs antes de borrar sucursal para no violar la FK. Las
+    # encomiendas se conservan (solo pierden el vínculo de sucursal/distancia,
+    # que se regenera al re-sembrar con seed_encomiendas).
+    db.execute(text("UPDATE encomienda SET sucursal_origen_id=NULL, sucursal_destino_id=NULL"))
     db.query(RutaCache).delete()
     db.query(IncidenteZona).delete()
     db.query(EnvioHistorico).delete()
