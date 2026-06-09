@@ -29,6 +29,14 @@ class SucursalRef(BaseModel):
     gps_lng: float
 
 
+class RutaOsrmOut(BaseModel):
+    """Geometría de la ruta de carretera (OSRM) calculada en el backend."""
+    geometry: list[list[float]]      # [[lat, lng], ...]
+    distancia_km: float
+    duracion_min: float | None
+    fuente: str                      # OSRM (camino real) | HAVERSINE (recta aprox)
+
+
 class ZonaEnRuta(BaseModel):
     id: int
     nombre: str

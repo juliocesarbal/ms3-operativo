@@ -119,6 +119,18 @@ class ReporteRankings(BaseModel):
     top_sucursales: list[Par]
 
 
+class RankingClienteDetalle(BaseModel):
+    """Drill-down de un cliente: sus envíos desglosados (panel interactivo)."""
+    cliente: str
+    total_envios: int
+    entregados_a_tiempo_pct: float
+    distancia_prom_km: float
+    por_servicio: list[Par]
+    por_zona: list[Par]
+    por_rutas: list[Par]
+    por_riesgo: list[Par]
+
+
 class ResumenDataset(BaseModel):
     sucursales: int
     zonas: int

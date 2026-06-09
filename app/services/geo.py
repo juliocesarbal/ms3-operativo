@@ -7,7 +7,11 @@ se aproxima con haversine * FACTOR_CARRETERA para mantener la misma métrica.
 """
 from __future__ import annotations
 
+import json
 import math
+import urllib.request
+from functools import lru_cache
+from urllib.error import URLError
 
 from sqlalchemy.orm import Session
 
@@ -15,6 +19,11 @@ from app.models.sucursal import Sucursal
 
 # Debe coincidir con ml_training/_routing.py (sinuosidad carretera vs línea recta).
 FACTOR_CARRETERA = 1.4
+
+# OSRM público (gratis, sin API key). Se llama SERVER-SIDE (no desde el navegador)
+# para que el ruteo no dependa del CORS/throttle del browser contra el demo server.
+OSRM_BASE = "https://router.project-osrm.org"
+_OSRM_TIMEOUT = 12
 
 
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -65,3 +74,44 @@ def zona_mas_cercana(db: Session, lat: float, lng: float):
     if not zonas:
         return None
     return min(zonas, key=lambda z: haversine_km(lat, lng, z.gps_lat, z.gps_lng))
+
+
+@lru_cache(maxsize=256)
+def _osrm_route_cached(olat: float, olng: float, dlat: float, dlng: float):
+    """Pide a OSRM la ruta de carretera (server-side). Cacheado en proceso.
+
+    Devuelve (geometry [[lat,lng],...], distancia_km, duracion_min, "OSRM") o
+    None si OSRM no responde. OSRM espera coordenadas como lng,lat.
+    """
+    url = (
+        f"{OSRM_BASE}/route/v1/driving/{olng},{olat};{dlng},{dlat}"
+        f"?overview=full&geometries=geojson"
+    )
+    try:
+        with urllib.request.urlopen(url, timeout=_OSRM_TIMEOUT) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except (URLError, TimeoutError, ValueError, OSError) as e:
+        print(f"  (OSRM ruta no disponible: {e})")
+        return None
+    if data.get("code") != "Ok" or not data.get("routes"):
+        return None
+    r = data["routes"][0]
+    coords = r["geometry"]["coordinates"]                  # [[lng,lat],...]
+    geometry = [[lat, lng] for lng, lat in coords]         # -> [[lat,lng],...]
+    return geometry, round(r["distance"] / 1000.0, 2), round(r["duration"] / 60.0, 1), "OSRM"
+
+
+def ruta_carretera(
+    olat: float, olng: float, dlat: float, dlng: float
+) -> tuple[list[list[float]], float, float | None, str]:
+    """Ruta de carretera entre dos puntos. Intenta OSRM (server-side); si falla,
+    cae a línea recta con distancia haversine*factor (misma métrica del seed).
+
+    Devuelve (geometry [[lat,lng],...], distancia_km, duracion_min|None, fuente).
+    fuente = "OSRM" (camino real) o "HAVERSINE" (recta aproximada).
+    """
+    osrm = _osrm_route_cached(olat, olng, dlat, dlng)
+    if osrm is not None:
+        return osrm
+    dist = round(haversine_km(olat, olng, dlat, dlng) * FACTOR_CARRETERA, 2)
+    return [[olat, olng], [dlat, dlng]], dist, None, "HAVERSINE"
