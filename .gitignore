@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 venv/
 .env
+envvars.yaml
 keys/*.pem
 *.db
 *.sqlite3
