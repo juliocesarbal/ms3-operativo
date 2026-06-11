@@ -1,0 +1,21 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.local
+envvars.yaml
+*.db
+*.sqlite3
+*.log
+.pytest_cache/
+.mypy_cache/
+.idea/
+ml_training/
+contextoMs3.md
+
+# keys: excluir todo MENOS el service account de Firebase (se necesita en la imagen para FCM)
+keys/*
+!keys/firebase-admin.json

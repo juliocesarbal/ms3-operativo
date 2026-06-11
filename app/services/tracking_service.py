@@ -36,6 +36,18 @@ def crear_encomienda(db: Session, data: EncomiendaCreate) -> Encomienda:
     db.add(EstadoHistorial(encomienda_id=enc.id, estado=Estado.REGISTRADO.value))
     db.commit()
     db.refresh(enc)
+
+    # CU-05: aviso de bienvenida via n8n (email + Telegram). Best-effort: si n8n
+    # no esta o falla, NO afecta la creacion de la encomienda.
+    n8n_client.disparar_bienvenida(
+        enc.tracking_code,
+        {
+            "cliente_nombre": enc.cliente_nombre,
+            "origen": enc.origen,
+            "destino": enc.destino,
+            "costo": enc.costo,
+        },
+    )
     return enc
 
 

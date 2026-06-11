@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.database import Base, engine
 from app import models  # noqa: F401  (registra los modelos en Base.metadata)
 from app.routers import (
+    bi,
     blockchain,
     encomiendas,
     entregas,
@@ -64,3 +65,4 @@ app.include_router(ia.router)
 app.include_router(reportes.router)
 app.include_router(blockchain.router)
 app.include_router(notificaciones.router)
+app.include_router(bi.router)

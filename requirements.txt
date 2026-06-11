@@ -22,3 +22,7 @@ web3>=7.0,<8.0
 qrcode>=7.4
 # Push FCM (notificaciones): Firebase Admin SDK. Sin credenciales es no-op.
 firebase-admin>=6.5
+# Chatbot BI (CU-16): interpreta prompts NL con Claude + exporta informes
+anthropic>=0.40
+openpyxl>=3.1
+reportlab>=4.0

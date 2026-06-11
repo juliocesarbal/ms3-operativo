@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_roles
 from app.models.dataset import IncidenteZona, ZonaDiaMetrica
 from app.schemas.dataset import IncidenteZonaCreate, IncidenteZonaOut
-from app.services import geo, notificacion_service
+from app.services import geo, n8n_client, notificacion_service
 
 router = APIRouter(prefix="/api/ops/incidentes", tags=["incidentes"])
 
@@ -64,6 +64,19 @@ def reportar(
             "gps_lat": inc.gps_lat,
             "gps_lng": inc.gps_lng,
             "tracking_ref": inc.tracking_ref,
+        },
+    )
+
+    # Alerta externa (email + Telegram) via n8n. Best-effort: no afecta el reporte.
+    n8n_client.disparar_incidente(
+        inc.tracking_ref,
+        {
+            "tipo": inc.tipo,
+            "descripcion": inc.descripcion,
+            "zona": zona.nombre if zona else None,
+            "gps_lat": inc.gps_lat,
+            "gps_lng": inc.gps_lng,
+            "asesor_id": inc.asesor_id,
         },
     )
     return inc

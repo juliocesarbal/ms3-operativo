@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     # Servicios externos (fases siguientes) - placeholders
     ms1_url: str = ""
     ms2_url: str = ""
-    n8n_webhook_url: str = ""
+    # n8n: un webhook por evento. Vacio => ese aviso no se dispara (best-effort).
+    n8n_webhook_url: str = ""      # retraso (CU-15)
+    n8n_bienvenida_url: str = ""   # al registrar encomienda (CU-05)
+    n8n_incidente_url: str = ""    # incidente / posible daño
 
     # IA de foto via API externa gratuita (Hugging Face Inference API).
     # hf_api_token vacio => se usa el modelo local (fallback) si esta disponible.
@@ -37,6 +40,11 @@ class Settings(BaseSettings):
     # Push FCM (Firebase Cloud Messaging). Ruta al JSON del service account.
     # Vacio o archivo inexistente => el envio push es no-op (el centro en BD sigue).
     fcm_credentials: str = ""
+
+    # Chatbot BI (CU-16): interpreta prompts en lenguaje natural con Claude y
+    # genera/exporta informes. Vacio => el endpoint responde 503 (no configurado).
+    claude_api_key: str = ""
+    claude_model: str = "claude-haiku-4-5"  # el mas barato/rapido para extraer params
 
     # Blockchain (CU-14) - Sepolia via Infura. Vacios => solo registro local del hash
     # (sin enviar a la cadena). Se completan tras desplegar el contrato.

@@ -17,6 +17,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Codigo + modelos ML ya entrenados (.pkl/.keras estan versionados en el repo).
 COPY app ./app
 
+# Service account de Firebase para push FCM (keys/firebase-admin.json).
+# El .gcloudignore deja subir solo ese json (los .pem quedan fuera). Sin esto, FCM = no-op.
+COPY keys ./keys
+
 # Cloud Run inyecta PORT (default 8080). La app escucha en 0.0.0.0:$PORT.
 ENV PORT=8080
 EXPOSE 8080
