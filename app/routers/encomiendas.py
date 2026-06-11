@@ -1,4 +1,8 @@
+import io
+
+import qrcode
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -67,3 +71,32 @@ def detalle(
     if not enc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Encomienda no encontrada")
     return enc
+
+
+# QR de la guia: PNG que codifica el tracking_code. Se genera al vuelo (el QR es el
+# tracking, asi el mismo codigo sirve para escaneo-qr y para el detalle del envio).
+# Descargable/imprimible desde la web del admin para pegar en el paquete.
+@router.get("/{tracking}/qr")
+def qr(
+    tracking: str,
+    box_size: int = 10,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+):
+    enc = tracking_service.obtener_por_tracking(db, tracking)
+    if not enc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Encomienda no encontrada")
+
+    qr_img = qrcode.QRCode(box_size=max(2, min(box_size, 20)), border=2)
+    qr_img.add_data(enc.tracking_code)
+    qr_img.make(fit=True)
+    img = qr_img.make_image(fill_color="black", back_color="white")
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="image/png",
+        headers={"Content-Disposition": f'inline; filename="QR-{enc.tracking_code}.png"'},
+    )

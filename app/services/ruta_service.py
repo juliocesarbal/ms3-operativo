@@ -4,7 +4,7 @@ from app.core.estados import Estado, puede_transicionar
 from app.models.encomienda import Encomienda
 from app.models.operacion import Ruta
 from app.schemas.operacion import RutaCreate
-from app.services import tracking_service
+from app.services import notificacion_service, tracking_service
 
 
 # CU-08: crea la ruta, asigna encomiendas y las pasa a EN_TRANSITO (si corresponde).
@@ -36,6 +36,16 @@ def crear_ruta(db: Session, data: RutaCreate) -> Ruta:
 
     db.commit()
     db.refresh(ruta)
+
+    # Notifica al asesor que tiene una ruta nueva asignada.
+    notificacion_service.crear(
+        db,
+        tipo="RUTA_ASIGNADA",
+        titulo="Nueva ruta asignada",
+        cuerpo=f"Ruta #{ruta.id} ({ruta.zona_ref or 'sin zona'}) con {len(encs)} envío(s).",
+        destinatario_id=ruta.asesor_id,
+        data={"ruta_id": ruta.id, "zona_ref": ruta.zona_ref, "paradas": len(encs)},
+    )
     return ruta
 
 

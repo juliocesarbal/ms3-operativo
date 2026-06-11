@@ -14,6 +14,7 @@ from app.routers import (
     ia,
     incidentes,
     ml,
+    notificaciones,
     reportes,
     ruta,
     rutas,
@@ -62,3 +63,4 @@ app.include_router(ruta.router)
 app.include_router(ia.router)
 app.include_router(reportes.router)
 app.include_router(blockchain.router)
+app.include_router(notificaciones.router)
