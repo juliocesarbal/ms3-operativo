@@ -23,6 +23,19 @@ class Settings(BaseSettings):
     ms2_url: str = ""
     n8n_webhook_url: str = ""
 
+    # IA de foto via API externa gratuita (Hugging Face Inference API).
+    # hf_api_token vacio => se usa el modelo local (fallback) si esta disponible.
+    hf_api_token: str = ""
+    hf_model: str = "google/vit-base-patch16-224"  # image-classification (serverless)
+    # Endpoint de inferencia. El viejo (api-inference.huggingface.co) fue deprecado
+    # en 2025; ahora se usa el router. Se compone como {hf_api_base}/{hf_model}.
+    hf_api_base: str = "https://router.huggingface.co/hf-inference/models"
+    ia_fallback_local: bool = True  # si HF falla/no hay token, intenta el modelo local
+
+    # Push FCM (Firebase Cloud Messaging). Ruta al JSON del service account.
+    # Vacio o archivo inexistente => el envio push es no-op (el centro en BD sigue).
+    fcm_credentials: str = ""
+
     # Blockchain (CU-14) - Sepolia via Infura. Vacios => solo registro local del hash
     # (sin enviar a la cadena). Se completan tras desplegar el contrato.
     web3_provider: str = ""

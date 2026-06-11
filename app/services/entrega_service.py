@@ -4,7 +4,7 @@ from app.core.estados import Estado
 from app.models.encomienda import Encomienda
 from app.models.operacion import Entrega, Ruta
 from app.schemas.operacion import EscaneoResult
-from app.services import tracking_service
+from app.services import notificacion_service, tracking_service
 
 
 def _asignada_a(db: Session, enc: Encomienda, asesor_id: str) -> bool:
@@ -59,4 +59,14 @@ def confirmar_entrega(
     db.commit()
     db.refresh(entrega)
     # TODO Fase 4: registrar evento ENTREGA_CONFIRMADA en blockchain.
+
+    # Avisa al admin que se confirmó una entrega.
+    notificacion_service.crear(
+        db,
+        tipo="ENTREGA",
+        titulo=f"Entrega confirmada: {enc.tracking_code}",
+        cuerpo=f"El asesor {asesor_id} entregó {enc.tracking_code} ({enc.destino or 'destino'}).",
+        destinatario_rol="ADMIN",
+        data={"tracking": enc.tracking_code, "asesor_id": asesor_id, "entrega_id": entrega.id},
+    )
     return entrega

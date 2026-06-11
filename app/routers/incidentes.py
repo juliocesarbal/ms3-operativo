@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_roles
 from app.models.dataset import IncidenteZona, ZonaDiaMetrica
 from app.schemas.dataset import IncidenteZonaCreate, IncidenteZonaOut
-from app.services import geo
+from app.services import geo, notificacion_service
 
 router = APIRouter(prefix="/api/ops/incidentes", tags=["incidentes"])
 
@@ -49,6 +49,23 @@ def reportar(
 
     db.commit()
     db.refresh(inc)
+
+    # Notifica al admin (centro de notificaciones) que hay un incidente nuevo.
+    notificacion_service.crear(
+        db,
+        tipo="INCIDENCIA",
+        titulo=f"Nuevo incidente: {inc.tipo}",
+        cuerpo=inc.descripcion or "Un asesor reportó un incidente de zona.",
+        destinatario_rol="ADMIN",
+        data={
+            "incidente_id": inc.id,
+            "tipo": inc.tipo,
+            "asesor_id": inc.asesor_id,
+            "gps_lat": inc.gps_lat,
+            "gps_lng": inc.gps_lng,
+            "tracking_ref": inc.tracking_ref,
+        },
+    )
     return inc
 
 

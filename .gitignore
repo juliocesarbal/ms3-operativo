@@ -4,6 +4,7 @@ __pycache__/
 venv/
 .env
 keys/*.pem
+keys/*.json
 *.db
 *.sqlite3
 *.log
