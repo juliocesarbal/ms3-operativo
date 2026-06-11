@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+.venv
+venv
+keys/*.pem
+.env
+.env.local
+*.db
+*.sqlite3
+*.log
+.git
+.gitignore
+.pytest_cache
+.mypy_cache
+contextoMs3.md
+ml_training

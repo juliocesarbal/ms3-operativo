@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./ms3_local.db"
 
     # JWT: valida tokens emitidos por MS1 (RS256) con su clave publica.
+    # Cloud: contenido PEM en env JWT_PUBLIC_KEY (prioridad). Local: archivo (path).
+    jwt_public_key: str = ""
     jwt_public_key_path: str = "keys/public.pem"
     jwt_algorithm: str = "RS256"
 

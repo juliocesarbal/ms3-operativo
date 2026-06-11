@@ -12,14 +12,20 @@ bearer = HTTPBearer(auto_error=True)
 
 
 def _load_public_key() -> str | None:
+    # Cloud: contenido PEM directo en env var JWT_PUBLIC_KEY (saltos reales o "\n" literales).
+    # Local: si no hay inline, lee el archivo keys/public.pem. Misma estrategia que MS1/MS2.
+    inline = settings.jwt_public_key
+    if inline and inline.strip():
+        return inline.replace("\\n", "\n") if "\\n" in inline else inline
+
     path = settings.jwt_public_key_path
     if path.startswith("file:"):
         path = path[5:]
     p = Path(path)
     if not p.exists():
         log.warning(
-            "Clave publica JWT no encontrada en '%s'. "
-            "Copia ms1-empresarial/keys/public.pem a ms3-operativo/keys/public.pem",
+            "Clave publica JWT no encontrada (env JWT_PUBLIC_KEY o archivo '%s'). "
+            "Cloud: setear JWT_PUBLIC_KEY. Local: copiar ms1-empresarial/keys/public.pem a ms3-operativo/keys/public.pem",
             path,
         )
         return None
